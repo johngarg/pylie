@@ -64,7 +64,7 @@ class CartanMatrix(object):
                     self._name = self._translation[self._name][0]
                     return self._constructCartanMatrix()
                 else:
-                    print"Error unknown Lie Algebra, try 'A', 'B','C' or 'D'"
+                    print("Error unknown Lie Algebra, try 'A', 'B','C' or 'D'")
                     return
 
         if self._name in ["A", "B", "C"] and self._id == 1:
@@ -1803,7 +1803,7 @@ class LieAlgebra(object):
         Check = all([el == zeros(N, N) for el in Check])
 
         if not Check:
-            print "ERROR while determining the structure constants"
+            print("ERROR while determining the structure constants")
             self.struc = []
             return []
         else:
