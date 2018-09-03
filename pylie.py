@@ -1,3 +1,9 @@
+from __future__ import absolute_import
+from __future__ import print_function
+from six.moves import map
+from six.moves import range
+from six.moves import zip
+from functools import reduce
 __author__ = 'florian'
 
 """
@@ -6,17 +12,11 @@ algebra, calculate the system of roots, weights, casimir, dynkin, Matrix represe
 several irrep.
 It is a python implementation of the Susyno group method.
 """
-import sys
-sys.path.insert(0, '/Applications/HEPtools/sympy-1.0')
-import numpy as np
-try:
-    from sympy import *
-except ImportError:
-    print("Error, importing sympy.")
-    exit("Error, importing sympy.")
-import time
-from sympy.combinatorics import Permutation
 
+import numpy as np
+from sympy import *
+from sympy.combinatorics import Permutation
+import time
 import copy as cp
 import operator
 import itertools
@@ -130,11 +130,11 @@ class LieAlgebra(object):
         self._dominantWeightsStore = {}
         self._invariantsStore = {}
         self._dimR = {}
-        self.a, self.b, self.c, self.d, self.e = map(IndexedBase, ['a', 'b', 'c', 'd', 'e'])
-        self.f, self.g, self.h, self.i = map(IndexedBase, ['f', 'g', 'h', 'i'])
+        self.a, self.b, self.c, self.d, self.e = list(map(IndexedBase, ['a', 'b', 'c', 'd', 'e']))
+        self.f, self.g, self.h, self.i = list(map(IndexedBase, ['f', 'g', 'h', 'i']))
         self._symblist = [self.a, self.b, self.c, self.d, self.e]
         self._symbdummy = [self.f, self.g, self.h, self.i]
-        self.p, self.q = map(Wild, ['p', 'q'])
+        self.p, self.q = list(map(Wild, ['p', 'q']))
         self.pp = Wild('pp', exclude=[IndexedBase])
         # create an Sn object for all the manipulation on the  Sn  group
         self.Sn = Sn()
@@ -166,7 +166,7 @@ class LieAlgebra(object):
         # returns the longest Weyl word: from the Lie manual see Susyno
         weight = [-1] * self._n
         result = []
-        while map(abs, weight) != weight:
+        while list(map(abs, weight)) != weight:
             for iel, el in enumerate(weight):
                 if el < 0:
                     break
@@ -219,7 +219,7 @@ class LieAlgebra(object):
                 for i in range(1, self._n + 1):
                     if wL[counter - 1][j - 1][i - 1] > 0:
                         aux = self._reflectWeight(wL[counter - 1][j - 1], i)[i + 1 - 1:self._n + 1]
-                        if aux == map(abs, aux):
+                        if aux == list(map(abs, aux)):
                             wL[counter].append(self._reflectWeight(wL[counter - 1][j - 1], i))
             result = result + wL[counter]  # Join the list
         return result
@@ -600,7 +600,7 @@ class LieAlgebra(object):
                                       mode='constant')
                 aux4 = aux3.transpose()
                 if np.all((np.dot(aux3, aux4)) != matrix):
-                    print("Error in repminimal matrices:", aux3, " ", aux4, " ", matrix)
+                    print(("Error in repminimal matrices:", aux3, " ", aux4, " ", matrix))
                 # Obtain the blocks in  (w+\[Alpha]i)i and wj. Use it to feed the recursive algorith so that we can calculate the next w's
                 aux1 = np.array(
                     [[0, 0]])  # format (+-): (valid cm raise index i - 1, start position of weight w+cm[[i-1]]-1)
@@ -694,7 +694,7 @@ class LieAlgebra(object):
         # let's reorder the conj accordingly
         conj = [conj[el] for el in order]
         # replacement rules
-        subs = [(self._symbdummy[i], self._symblist[j]) for i, j in zip(range(len(self._symblist)), order)]
+        subs = [(self._symbdummy[i], self._symblist[j]) for i, j in zip(list(range(len(self._symblist))), order)]
         if len(reps) == 2:
             cjs = not (conj[0] == conj[1])
             invs, maxinds = self._invariants2Irrep(skey, cjs)
@@ -761,13 +761,13 @@ class LieAlgebra(object):
         # It turns out that the sqrt factors are not simplified away and need to be done by end.
         # For that we look at the first element in the invariant and divide by its value if it is a sqrt
         for iv, inv in enumerate(tensor):
-            if type(inv.values()[0]) == Mul:
-                temp = inv.values()[0].match(sqrt(self.p) * self.q)
+            if type(list(inv.values())[0]) == Mul:
+                temp = list(inv.values())[0].match(sqrt(self.p) * self.q)
                 if not (temp is None):
                     tensor[iv] = [tuple(list(key) + [val / (sqrt(temp[self.p]) * temp[self.q])]) for key, val in
                                   inv.items()]
                 else:  # If if is none it means it is a complicated ratio but without sqrt or the sqrt is on a different entry. In any case normalize
-                    tensor[iv] = [tuple(list(key) + [val / inv.values()[0]]) for key, val in
+                    tensor[iv] = [tuple(list(key) + [val / list(inv.values())[0]]) for key, val in
                                   inv.items()]
             else:
                 tensor[iv] = [tuple(list(key) + [val]) for key, val
@@ -1250,7 +1250,7 @@ class LieAlgebra(object):
         for i in range(len(aux3)):
             fakeConjugationCharges[aux3[i][0]] = len(aux3[i][1])
             fakeConjugationCharges[aux3[i][1]] = len(aux3[i][0])
-        representations = zip(reps, fakeConjugationCharges)
+        representations = list(zip(reps, fakeConjugationCharges))
         representations = [self.conjugateIrrep(representations[i], u1in=True) if cjs[i] else representations[i] for i in
                            range(len(representations))]
         representations = [(tuple(el[0]),el[1]) for el in representations] #force the conjugated irreps to be tuples for tally below
@@ -1387,7 +1387,7 @@ class LieAlgebra(object):
         normalize the invariants according to sqrt(Prod_n Dim(rep_n)). Note that it also orthogonalize them!!
         """
         for iel, inv in enumerate(invariantsTensors):
-            norm = 1 / sqrt(np.sum(np.power(inv.values(), 2))) * sqrt(repDims)
+            norm = 1 / sqrt(np.sum(np.power(list(inv.values()), 2))) * sqrt(repDims)
             for key, val in inv.items():
                 inv[key] = val * norm
         return invariantsTensors
@@ -1490,7 +1490,7 @@ class LieAlgebra(object):
         if len(aux1) == 0:
             return eye(len(matrixIn[0]))
         preferredOrder = flatten(
-            [[iel for iel, el in enumerate(aux1) if len(el) == i] for i in range(1, max(map(len, aux1)) + 1)])
+            [[iel for iel, el in enumerate(aux1) if len(el) == i] for i in range(1, max(list(map(len, aux1))) + 1)])
         matrix = {}
         for iel, el in enumerate(preferredOrder):
             for ell in aux1[el]:
@@ -1824,7 +1824,7 @@ class Sn:
         """
         n = sum(Lambda)
         sts = self.generateStandardTableaux(Lambda)
-        basicPermutations = [Permutation(1, 2), Permutation(*range(1, n + 1))]
+        basicPermutations = [Permutation(1, 2), Permutation(*list(range(1, n + 1)))]
         # because the length of the lists on which we apply the permutations is not constant we need to resize them for each element
         tabloids, stsX = [], []
         for perm in basicPermutations:
@@ -1851,12 +1851,12 @@ class Sn:
                     tmp = [[self.math._position_in_array(targetTabloid, ell)[0][0] for ell in el] for el in
                            self._transposeTableaux(startingTableauxY)]
                     Y[alpha][i][j] = reduce(operator.mul,
-                                            [0 if sorted(el) != range(len(el)) else Permutation(el).signature() for el
+                                            [0 if sorted(el) != list(range(len(el))) else Permutation(el).signature() for el
                                              in tmp])
                     tmp = [[self.math._position_in_array(targetTabloid, ell)[0][0] for ell in el] for el in
                            self._transposeTableaux(startingTableauxX)]
                     X[alpha][i][j] = reduce(operator.mul,
-                                            [0 if sorted(el) != range(len(el)) else Permutation(el).signature() for el
+                                            [0 if sorted(el) != list(range(len(el))) else Permutation(el).signature() for el
                                              in tmp])
         result = [(SparseMatrix(X[i]) * SparseMatrix(Y[i]).inv()).transpose() for i in range(2)]
         # Finally let's orthogonalize the generators P_i
@@ -2127,7 +2127,7 @@ class MathGroup:
 
     def _issorted(self, llist):
         # returns wether a list is sorted
-        return all([llist[i] <= llist[i + 1] or llist[i + 1] is None for i in xrange(len(llist) - 1)])
+        return all([llist[i] <= llist[i + 1] or llist[i + 1] is None for i in range(len(llist) - 1)])
 
     def _tuples(self, llist, n):
         """
@@ -2143,7 +2143,7 @@ class MathGroup:
         aux1 = list(self._tuplesList(listoflists))
         aux2 = [reduce(operator.mul, [ell[1] for ell in el]) for el in aux1]
         aux1 = [[ell[0] for ell in el] for el in aux1]
-        res = zip(aux1, aux2)
+        res = list(zip(aux1, aux2))
         return res
 
     def _yieldParts(self, num, lt):
@@ -2164,13 +2164,13 @@ class MathGroup:
             if not (el in tally):
                 mul.append(llist.count(el))
                 tally.append(el)
-        return zip(tally, mul)
+        return list(zip(tally, mul))
 
     def _tallyWithMultiplicity(self, listoflists):
         aux1 = self._gatherAux(listoflists)
         aux2 = [sum([ell[1] for ell in el]) for el in aux1]
         aux1 = [el[0][0] for el in aux1]
-        result = zip(aux1, aux2)
+        result = list(zip(aux1, aux2))
         return result
 
     def _gatherAux(self, llist):
