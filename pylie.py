@@ -5,6 +5,10 @@ from six.moves import range
 from six.moves import zip
 from functools import reduce
 from past.utils import old_div
+from past.builtins import cmp
+from functools import cmp_to_key # for porting cmp function to key when sorting
+
+import pdb
 
 __author__ = 'florian'
 
@@ -303,10 +307,12 @@ class LieAlgebra(object):
         # need to sort listw
         def sortList(a, b):
             tp1 = list(np.dot(-(a - b), self.ncminv)[0])
-            return cmp(tp1, [0] * a.shape[1])
+            comp1 = [int(i) for i in tp1]
+            comp2 = [0] * a.shape[1]
+            return cmp(comp1, comp2)
 
-        # The Sorting looks to be identical to what was done in SUSYNO willl require further checking at some point
-        listw.sort(sortList)
+        # The Sorting looks to be identical to what was done in SUSYNO will require further checking at some point
+        listw.sort(key=cmp_to_key(sortList))
         # listw = [np.array([[1,1]]),np.array([[0,0]])]
         functionaux = {self._nptokey(listw[0]): 1}
         result = [[listw[0], 1]]
@@ -499,7 +505,7 @@ class LieAlgebra(object):
                 tp1 = list(np.dot(-(a[0] - b[0]), self.ncminv).ravel())
                 return cmp(tp1, [0] * a[0].shape[0])
 
-            result.sort(sortList)
+            result = sorted(result, key=cmp_to_key(sortList))
             return result
 
     def repMinimalMatrices(self, maxW):
