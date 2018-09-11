@@ -4,6 +4,8 @@ from six.moves import map
 from six.moves import range
 from six.moves import zip
 from functools import reduce
+from past.utils import old_div
+
 __author__ = 'florian'
 
 """
@@ -46,7 +48,7 @@ class CartanMatrix(object):
                     return self._constructCartanMatrix()
                 elif self._name == "SP":
                     if self._id % 2 == 0:
-                        self._id /= 2
+                        self._id = old_div(self._id, 2)
                         self._name = self._translation[self._name]
                         return self._constructCartanMatrix()
                     else:
@@ -56,11 +58,11 @@ class CartanMatrix(object):
                     if self._id < 5:
                         print("Error n >=3 or > 4 for SO(n)")
                         return
-                    self._id /= 2
+                    self._id = old_div(self._id, 2)
                     self._name = self._translation[self._name][1]
                     return self._constructCartanMatrix()
                 elif self._name == "SO" and self._id % 2 == 1:
-                    self._id = (self._id - 1) / 2
+                    self._id = old_div((self._id - 1), 2)
                     self._name = self._translation[self._name][0]
                     return self._constructCartanMatrix()
                 else:
@@ -116,7 +118,7 @@ class LieAlgebra(object):
         self._matD = self._matrixD()  # D matrix
         self._smatD = self._specialMatrixD()  # Special D matrix
         self._cmID = np.dot(self.ncminv, self._matD)  # matrix product of the inverse Cartan matrix and D matrix
-        self._cmIDN = self._cmID / np.max(self._matD)  # same as cmID but normalized to the max of matD
+        self._cmIDN = old_div(self._cmID, np.max(self._matD))  # same as cmID but normalized to the max of matD
         self.proots = self._positiveRoots()  # calc the positive roots
         # Sum the positive roots
         self._deltaTimes2 = self.proots.sum(axis=0)
@@ -327,8 +329,9 @@ class LieAlgebra(object):
                         aux1 = functionaux[kkey]
                     else:
                         aux1 = 0
-            functionaux[key] /= self._simpleProduct(listw[0] + listw[j - 1] + self._deltaTimes2,
-                                                    listw[0] - listw[j - 1], self._cmID)
+            functionaux[key] = old_div(functionaux[key],
+                                       self._simpleProduct(listw[0] + listw[j - 1] + self._deltaTimes2,
+                                                           listw[0] - listw[j - 1], self._cmID))
             result.append([listw[j - 1], self._indic(functionaux, self._nptokey(listw[j - 1]))])
         self._dominantWeightsStore[keyStore] = result
         return result
@@ -357,10 +360,11 @@ class LieAlgebra(object):
         delta = Rational(1, 2) * self._deltaTimes2
         if self.cartan._name == 'A' and self.cartan._id == 1:
             delta = np.array([delta])
-        result = np.prod([
-                             self._simpleProduct([self.proots[i - 1]], irrep + delta, self._cmID) / self._simpleProduct(
-                                 [self.proots[i - 1]], [delta], self._cmID)
-                             for i in range(1, len(self.proots) + 1)], axis=0)
+        result = np.prod(
+            [old_div(self._simpleProduct([self.proots[i - 1]], irrep + delta, self._cmID),
+                     self._simpleProduct([self.proots[i - 1]], [delta], self._cmID))
+             for i in range(1, len(self.proots) + 1)],
+            axis=0)
 
         result = int(float(str(result)))  # there is a serious bug here I have had some 45.000 converted into 44 !
         self._dimR[keydimR] = result
@@ -764,11 +768,11 @@ class LieAlgebra(object):
             if type(list(inv.values())[0]) == Mul:
                 temp = list(inv.values())[0].match(sqrt(self.p) * self.q)
                 if not (temp is None):
-                    tensor[iv] = [tuple(list(key) + [val / (sqrt(temp[self.p]) * temp[self.q])]) for key, val in
-                                  inv.items()]
+                    tensor[iv] = [tuple(list(key) + [old_div(val, sqrt(temp[self.p])*temp[self.q])])
+                                  for key, val in inv.items()]
                 else:  # If if is none it means it is a complicated ratio but without sqrt or the sqrt is on a different entry. In any case normalize
-                    tensor[iv] = [tuple(list(key) + [val / list(inv.values())[0]]) for key, val in
-                                  inv.items()]
+                    tensor[iv] = [tuple(list(key) + [old_div(val, list(inv.values())[0])])
+                                  for key, val in inv.items()]
             else:
                 tensor[iv] = [tuple(list(key) + [val]) for key, val
                               in inv.items()]
@@ -1366,7 +1370,7 @@ class LieAlgebra(object):
         for iel, el in enumerate(invs):
             norm = sum([ell.replace(self.a[self.q], 1).replace(self.b[self.q], 1).replace(self.c[self.q], 1).replace(
                 self.d[self.q], 1) ** 2 for ell in el.args])
-            invs[iel] = (el / sqrt(norm) * sqrt(repDims)).expand()
+            invs[iel] = (old_div(el, sqrt(norm)*sqrt(repDims))).expand()
         return invs
 
     def _normalizeInvariantsTensorMat(self, invariantsTensors, repDims):
@@ -1387,7 +1391,7 @@ class LieAlgebra(object):
         normalize the invariants according to sqrt(Prod_n Dim(rep_n)). Note that it also orthogonalize them!!
         """
         for iel, inv in enumerate(invariantsTensors):
-            norm = 1 / sqrt(np.sum(np.power(list(inv.values()), 2))) * sqrt(repDims)
+            norm = old_div(1, sqrt(np.sum(np.power(list(inv.values()), 2)))) * sqrt(repDims)
             for key, val in inv.items():
                 inv[key] = val * norm
         return invariantsTensors
@@ -1434,13 +1438,14 @@ class LieAlgebra(object):
             listE[i] = listE[i].add(listF[i])
             listF[i] = aux.add(-listF[i])
             # Control the normalization of the Tx,Ty matrices with the trace condition
-            listE[i] = SparseMatrix(listE[i] * sqrt(sR) / sqrt((listE[i].multiply(listE[i])).trace()))
-            listF[i] = SparseMatrix(listF[i] * sqrt(sR) / sqrt((listF[i].multiply(listF[i])).trace()))
+            listE[i] = SparseMatrix(listE[i] * old_div(sqrt(sR), sqrt((listE[i].multiply(listE[i])).trace())))
+            listF[i] = SparseMatrix(listF[i] * old_div(sqrt(sR), sqrt((listF[i].multiply(listF[i])).trace())))
         matrixCholesky = np.dot(self.ncminv, self._matD)  # See the casimir expression in a book on lie algebras
         aux = (SparseMatrix(matrixCholesky).cholesky()).transpose()  # get the actual cholesky decomposition from sympy
         listH = [reduce(operator.add, [listH[j] * aux[i, j] for j in range(self._n)]) for i in range(self._n)]
         # Up to multiplicative factors, Tz are now correct. We fix again the normalization with the trace condition
-        listH = [listH[i] * (sqrt(sR) / sqrt((listH[i].multiply(listH[i])).trace())) for i in range(self._n)]
+        listH = [listH[i] * old_div(sqrt(sR), sqrt((listH[i].multiply(listH[i])).trace()))
+                 for i in range(self._n)]
         listTotal = sum([listE, listF, listH], [])
         self._repMatrices[tag] = listTotal
         return listTotal
@@ -1547,12 +1552,12 @@ class LieAlgebra(object):
                     fac = [(lhs.match(self.p * ell), ell) for ell in symbs if lhs.match(self.p * ell) is not None]
                     if fac:
                         assert len(fac) == 1
-                        outres[fac[0][1]] = rhs * 1 / fac[0][0][self.p]
+                        outres[fac[0][1]] = rhs * old_div(1, fac[0][0][self.p])
                     else:
                         lhsargs = (lhs - rhs).args
                         smallest_v = sorted([el.args[1] for el in list(vs)])
                         lhs_factor = lhsargs[0].match(symb[smallest_v[0]] * self.p)[self.p]
-                        rhs = (-lhsargs[1] * 1 / lhs_factor).expand()
+                        rhs = (-lhsargs[1] * old_div(1, lhs_factor)).expand()
                         outres[symb[smallest_v[0]]] = rhs
                 else:
                     # maybe there is an overall factor still
@@ -1670,7 +1675,7 @@ class LieAlgebra(object):
         kList = list(self.math._partitionInteger(n))
         summing = []
         for i in range(len(kList)):
-            factor = 1 / factorial(n) * self.Sn.snClassOrder(kList[i]) * self.Sn.snClassCharacter(partition, kList[i])
+            factor = old_div(1, factorial(n)) * self.Sn.snClassOrder(kList[i]) * self.Sn.snClassCharacter(partition, kList[i])
             aux = [self._adams(el, weight) for el in kList[i]]
             aux = self._reduceRepPolyProduct(aux)
             aux = [(el[0], factor * el[1]) for el in aux]
@@ -1883,7 +1888,7 @@ class Sn:
         This method decomposes the product of a list of Sn rep into its irreducible parts
         """
         n = sum(partitionsList[0])
-        result = [1 / factorial(n) * sum([
+        result = [old_div(1, factorial(n)) * sum([
                                              self.snClassOrder(i) * reduce(operator.mul, [
                                                  self.snClassCharacter(inputPartition, list(i)) for inputPartition in
                                                  partitionsList])
@@ -1899,8 +1904,10 @@ class Sn:
         """
         n = sum(partition)
         aux = self.math.tally(partition)
-        return factorial(n) / (
-            reduce(operator.mul, [aux[i][0] ** aux[i][1] * factorial(aux[i][1]) for i in range(len(aux))]))
+        return old_div(factorial(n),
+                       reduce(operator.mul,
+                               [aux[i][0] ** aux[i][1] * factorial(aux[i][1])
+                                for i in range(len(aux))]))
 
     def snClassCharacter(self, partitionL, partitionM):
         """
@@ -2014,7 +2021,7 @@ class Sn:
                    for
                    i in range(1, n1 + 1)]
         else:
-            aux = [[(nMax + i - j) / (partition[j - 1] + inverseP[i - 1] - (j - 1) - (i - 1) - 1)
+            aux = [[old_div((nMax + i - j), (partition[j - 1] + inverseP[i - 1] - (j - 1) - (i - 1) - 1))
                     if partition[j - 1] + inverseP[i - 1] - (j - 1) - (i - 1) - 1 > 0 else 1 for j in range(1, n2 + 1)]
                    for
                    i in range(1, n1 + 1)]
@@ -2049,7 +2056,7 @@ class Sn:
         inverseP = [len([x for x in partition if x >= el]) for el in range(1, n1 + 1)]
         result = [max([partition[j - 1] + inverseP[i - 1] - (j - 1) - (i - 1) - 1, 1]) for j in range(1, n2 + 1) for i
                   in range(1, n1 + 1)]
-        result = factorial(sum(partition)) / reduce(operator.mul, result)
+        result = old_div(factorial(sum(partition)), reduce(operator.mul, result))
         return result
 
 class MathGroup:
@@ -2075,7 +2082,7 @@ class MathGroup:
             for j in range(i):
                 if matD[j, j] != 0:
                     if type(matD[j, j]) in [Add, Mul]:
-                        coeff = 1 / matD[j, j]
+                        coeff = old_div(1, matD[j, j])
                     else:
                         coeff = Rational(1, matD[j, j])
                     matL[i, j] = coeff * (
