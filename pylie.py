@@ -542,7 +542,9 @@ class LieAlgebra(object):
         # auxiliary function for the repMatrices method base on the Chevalley-Serre relations
 
         cmaxW = self.conjugateIrrep(self._tolist(maxW))
-        if cmp(self._tolist(maxW), self._tolist(cmaxW)) in [-1, 0] and not (np.all(cmaxW == maxW)):
+        c1 = [int(i) for i in self._tolist(maxW)]
+        c2 = [int(i) for i in self._tolist(cmaxW)]
+        if cmp(c1, c2) in [-1, 0] and not (np.all(cmaxW == maxW)):
             return [[-1 * el[1], -1 * el[0], -1 * el[2]] for el in
                     self.repMinimalMatrices(cmaxW)]
         else:
