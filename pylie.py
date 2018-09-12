@@ -413,9 +413,11 @@ class LieAlgebra(object):
             dma, dmb = self.dimR(a), self.dimR(b)
             repa, repb = self._representationIndex(np.array([a])), self._representationIndex(np.array([b]))
             conja, conjb = self._conjugacyClass(a), self._conjugacyClass(b)
-            return cmp(tuple(flatten([dma, repa, conja])), tuple(flatten([dmb, repb, conjb])))
+            comp1 = tuple([int(i) for i in flatten([dma, repa, conja])])
+            comp2 = tuple([int(i) for i in flatten([dmb, repb, conjb])])
+            return cmp(comp1, comp2)
 
-        reap.sort(sortByDimension)
+        reap.sort(key=cmp_to_key(sortByDimension))
         return reap
 
     def _getGroupWithRankNsqr(self, n):
@@ -492,20 +494,26 @@ class LieAlgebra(object):
         so that RepMatrices[group,ConjugateIrrep[group,w]]=-Conjugate[RepMatrices[group,w]]
         and Invariants[group,{w,ConjugateIrrep[group,w]},{False,False}]=a[1]b[1]+...+a[n]b[n]
         """
-        if (cmp(list(weights), list(self.conjugateIrrep(weights))) in [-1, 0]) and not (np.all(
+        c1 = [int(i) for i in weights]
+        c2 = [int(i) for i in self.conjugateIrrep(weights)]
+        if (cmp(c1, c2) in [-1, 0]) and not (np.all(
                     (self.conjugateIrrep(weights)) == weights)):
             return [np.array([-1, 1], dtype=int) * el for el in self._weights(self.conjugateIrrep(weights))]
         else:
             dw = self._dominantWeights(weights)
             result = sum(
-                [[[np.array(el, dtype=int), dw[ii][1]] for el in self._weylOrbit(self._tolist(dw[ii][0][0]))] for ii in
-                 range(len(dw))], [])
+                [[[np.array(el, dtype=int), dw[ii][1]]
+                  for el in self._weylOrbit(self._tolist(dw[ii][0][0]))]
+                 for ii in range(len(dw))],
+                [])
 
             def sortList(a, b):
                 tp1 = list(np.dot(-(a[0] - b[0]), self.ncminv).ravel())
-                return cmp(tp1, [0] * a[0].shape[0])
+                comp1 = [int(i) for i in tp1]
+                comp2 = ([0] * a[0].shape[0])
+                return cmp(comp1, comp2)
 
-            result = sorted(result, key=cmp_to_key(sortList))
+            result.sort(key=cmp_to_key(sortList))
             return result
 
     def repMinimalMatrices(self, maxW):
@@ -1405,7 +1413,7 @@ class LieAlgebra(object):
     def repMatrices(self, maxW):
         """
         This method returns the complete set of matrices that make up a representation, with the correct casimir and trace normalizations
-        1) The matrices {M_i} given by this method are in conformity with the usual requirements in particle physics: \!\(
+        1) The matrices {M_i} given by this method are in conformity with the usual requirements in particle physics:
             M_a^\Dagger = M_a ; Tr(M_a M_b = S(rep) \Delta_ab; Sum_a M_a M_a = C(rep) 1.
         """
         # check if its been calculated already
