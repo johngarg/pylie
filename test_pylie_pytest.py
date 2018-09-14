@@ -113,3 +113,29 @@ def test_rep_minimal_matrices():
     assert sym.flatten(res_su3) == sym.flatten(test_rep_minimal_matrices_res_su3)
     assert sym.flatten(res_su5) == sym.flatten(test_rep_minimal_matrices_res_su5)
     assert sym.flatten(res_sp12) == sym.flatten(test_rep_minimal_matrices_res_sp12)
+
+def test_rep_matrices():
+    assert sym.flatten(su2.repMatrices([1])) == sym.flatten(
+        [sym.Matrix([[0, sym.Rational(1,2)],
+                     [sym.Rational(1,2), 0]]),
+         sym.Matrix([[0, -sym.sqrt(sym.Rational(-1,4))],
+                     [sym.sqrt(sym.Rational(-1,4)), 0]]),
+         sym.Matrix([[sym.Rational(1,2), 0],
+                     [0, sym.Rational(-1,2)]])])
+    # TODO more tests to add here from examples
+
+def test_invariants():
+    a = sym.IndexedBase('a')
+    b = sym.IndexedBase('b')
+    c = sym.IndexedBase('c')
+    d = sym.IndexedBase('d')
+
+    assert su2.invariants([[1], [1]], conj=[False, False]) == [a[1]*b[2] - a[2]*b[1]]
+    assert su2.invariants([[1], [1]], conj=[False, True]) == [a[1]*b[1] + a[2]*b[2]]
+    assert su2.invariants([[1], [1]], conj=[True, False]) == [a[1]*b[1] + a[2]*b[2]]
+    assert su2.invariants([[1], [1]], conj=[True, True]) == [a[1]*b[2] - a[2]*b[1]]
+
+    assert su3.invariants([[1,0], [0,1]]) == [a[1]*b[1] + a[2]*b[2] + a[3]*b[3]]
+    assert su3.invariants([[1,0], [1,0], [1,0]]) == test_invariants_res_su3_333
+    assert su3.invariants([[1,0], [0,1], [1,1]]) == test_invariants_res_su3_33b8
+    assert su4.invariants([[1,1,0], [1,1,0]], conj=[False, True]) == test_invariants_res_su4
